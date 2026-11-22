@@ -1,0 +1,48 @@
+{
+  "id": "secops-resilience",
+  "title": "AI Supply Chain & Runtime Kill Switch",
+  "domainLabel": "AI SecOps & Kill Switch",
+  "description": "Enforce CycloneDX AI-BOM prompt/model hash pinning, detect CUST-CANARY-999 exfiltration, and execute a 3-Tier Agentic Kill Switch with CISO dual-custody.",
+  "repo": "c2pig/0trust-lab-secops-resilience",
+  "routePath": "/secops-resilience",
+  "standaloneUrl": "https://lab.0trust.dev/secops-resilience",
+  "localDevPort": 5178,
+  "archetype": "B+C",
+  "seats": [
+    {
+      "id": "mlsecops",
+      "persona": "Kieran Patel",
+      "roleLabel": "MLSecOps · CI/CD & AI-BOM Gate",
+      "appLabel": "Supply-Chain Admission Console"
+    },
+    {
+      "id": "soc-commander",
+      "persona": "Nadia Morales",
+      "roleLabel": "SOC Lead · Runtime War Room",
+      "appLabel": "Canary & Kill-Switchboard"
+    },
+    {
+      "id": "ciso-cosigner",
+      "persona": "Morgan Vance",
+      "roleLabel": "CISO · Dual-Custody Co-Signer",
+      "appLabel": "Tier-3 Break-Glass Vault"
+    }
+  ],
+  "apiEndpoints": [
+    "/api/secops-resilience/verify-bom",
+    "/api/secops-resilience/canary-probe",
+    "/api/secops-resilience/kill-switch"
+  ],
+  "kvPrefixes": [
+    "lab3:secops:"
+  ],
+  "infraDependencies": [
+    "managed-infrastructure/modules/cloudflare-pages-lab",
+    "Sigstore Cosign + CycloneDX AI-BOM",
+    "AWS IAM Deny * Runtime Quarantine"
+  ],
+  "diagrams": {
+    "localArchitectureMd": "docs/ARCHITECTURE.md",
+    "zoominSvg": "docs/diagrams/secops_resilience_architecture.svg"
+  }
+}
