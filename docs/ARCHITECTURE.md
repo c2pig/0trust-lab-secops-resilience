@@ -1,10 +1,24 @@
 # Lab 3 Architecture: AI Supply Chain & Runtime Kill Switch (`0trust-lab-secops-resilience`)
 
-Standalone Model 1 lab hosted on Cloudflare Pages (`0trust-lab-secops-resilience.pages.dev`) and routed via `0trust-lab-router` at `https://lab.0trust.dev/secops-resilience`.
+Standalone Model 1 lab served at `https://lab.0trust.dev/secops-resilience` via `0trust-lab-router` (`c2pig/0trust.dev`), splitting static SPA hosting on Cloudflare Pages (`0trust-lab-secops-resilience.pages.dev`, `dist/` only) and API execution on **GCP Cloud Run** (`0trust-lab-secops-resilience`, Node 22 + Hono, `min_instance_count = 0`) backed by **GCP Firestore (Native mode)**.
 
 ## Architecture Overview
 
 ![AI Supply Chain & Runtime Kill Switch Architecture](diagrams/secops_resilience_architecture.svg)
+
+```mermaid
+flowchart LR
+    Visitor["Visitor Browser (https://lab.0trust.dev/secops-resilience)"]
+    Router["Cloudflare Worker: 0trust-lab-router (Injects X-Lab-Router-Secret + X-Forwarded-Host)"]
+    Pages["Cloudflare Pages (Static dist/ SPA only)"]
+    CloudRun["GCP Cloud Run: 0trust-lab-secops-resilience (Node 22 + Hono · /healthz + /api/secops-resilience/*)"]
+    Firestore["GCP Firestore Native (kv_state · secops-resilience:<key> · synchronous expireAt TTL)"]
+
+    Visitor --> Router
+    Router -->|"Static SPA"| Pages
+    Router -->|"/api/secops-resilience/* + X-Lab-Router-Secret"| CloudRun
+    CloudRun <--> Firestore
+```
 
 ## Components & Contracts
 
@@ -13,11 +27,14 @@ Standalone Model 1 lab hosted on Cloudflare Pages (`0trust-lab-secops-resilience
    - `soc-commander` (**Nadia Morales**): Runtime War Room operating `CUST-CANARY-999` tripwire probes, runaway velocity guards (`>$50/min`), and the 3-Tier Kill Switchboard.
    - `ciso-cosigner` (**Morgan Vance**): Dual-custody hardware FIDO2 WebAuthn co-signer required for Tier 3 Global Fleet Circuit Breaker.
 
-2. **Edge API Endpoints (`functions/api/secops-resilience/`)**:
+2. **Cloud Run API Endpoints (`server/app.ts` wrapping `functions/api/secops-resilience/`)**:
+   - `GET /healthz`: Unauthenticated Cloud Run startup/liveness probe returning `200 { ok: true, lab: 'secops-resilience' }`.
    - `POST /api/secops-resilience/verify-bom`: Evaluates CycloneDX AI-BOM hashes and Cosign OIDC attestation; fails closed (`403 AI_BOM_HASH_MISMATCH`) on Trap 3A when hash pinning is enabled.
    - `POST /api/secops-resilience/canary-probe`: Detects `CUST-CANARY-999` exfiltration (Trap 3B), DLP-001..003 violations, and `>$50/min` runaway cost loops (Trap 3C) with `423 CANARY_TRIPWIRE_TRIGGERED`.
    - `POST /api/secops-resilience/kill-switch`: Executes `TIER_1_MCP_FREEZE`, `TIER_2_IAM_DENY` (AWS IAM `Deny *`), `TIER_3_GLOBAL_BREAKER` (fails closed `403 DUAL_CUSTODY_REQUIRED` without CISO FIDO2 assertion), and `RESET`.
 
-3. **State & Observability**:
-   - Session-scoped `STATE_KV` (`lab3:secops:<sessionId>`, `1h TTL`) with ephemeral-edge `Map` fallback and `$0/mo` deterministic client-side fallback in `vite dev`.
-   - `functions/api/_middleware.ts` injects W3C `traceparent` and `_telemetry` spans into JSON responses for `XRayTelemetryDrawer`.
+3. **Security, State & Observability**:
+   - **Direct Origin Blocking**: All `/api/*` requests fail closed with `403 FORBIDDEN_DIRECT_ORIGIN` unless `X-Lab-Router-Secret` matches in constant time (`crypto.timingSafeEqual`).
+   - **Firestore Native State (`server/kvAdapter.ts`)**: Session-scoped `kv_state` documents (`secops-resilience:<encodedKey>`, `1h TTL`) with synchronous `expireAt.toMillis() <= Date.now()` expiry enforcement and local `MemoryKvAdapter` fallback in `npm run dev` (Vite `:5178` proxying `/api` to `127.0.0.1:8080`, zero GCP/Wrangler credentials required).
+   - **Observability**: `functions/api/_middleware.ts` injects W3C `traceparent`, `X-Edge-Latency-Ms`, and `_telemetry` spans into JSON responses for `XRayTelemetryDrawer`, while redacting JWT signatures in `Authorization` and never exposing `X-Lab-Router-Secret` or `OTLP_AUTH_HEADER`.
+   - **Infrastructure (`infra/terraform`)**: Composes `managed-infrastructure//modules/cloudflare-pages-lab` (static SPA) and `managed-infrastructure//modules/cloud-run-lab` (Cloud Run v2, least-privilege runtime SA, Secret Manager mounts).
