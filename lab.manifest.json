@@ -5,6 +5,7 @@
   "description": "Enforce CycloneDX AI-BOM prompt/model hash pinning, detect CUST-CANARY-999 exfiltration, and execute a 3-Tier Agentic Kill Switch with CISO dual-custody.",
   "repo": "c2pig/0trust-lab-secops-resilience",
   "routePath": "/secops-resilience",
+  "apiPrefix": "/api/secops-resilience",
   "standaloneUrl": "https://lab.0trust.dev/secops-resilience",
   "localDevPort": 5178,
   "archetype": "B+C",

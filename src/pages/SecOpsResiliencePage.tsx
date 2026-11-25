@@ -1,19 +1,12 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   Activity,
-  AlertTriangle,
   ArrowLeft,
   ArrowRight,
-  CheckCircle2,
   Clock,
   Cpu,
-  KeyRound,
-  Lock,
   Play,
-  RotateCcw,
-  ShieldAlert,
-  ShieldCheck,
-  Zap
+  RotateCcw
 } from 'lucide-react';
 import {
   BomBuildPresetId,
@@ -33,6 +26,9 @@ import {
 } from '../engine/secopsResilienceEngine';
 import { RoleSeatItem, RoleSwitcherBar } from '../components/RoleSwitcherBar';
 import { XRayDecodedProofSection, XRayTelemetryDrawer } from '../components/XRayTelemetryDrawer';
+import { MlSecOpsBomSeat } from '../components/secops-resilience/MlSecOpsBomSeat';
+import { SocKillSwitchSeat } from '../components/secops-resilience/SocKillSwitchSeat';
+import { CisoDualCustodySeat } from '../components/secops-resilience/CisoDualCustodySeat';
 import { ObservabilitySpan } from '../types';
 
 export interface SecOpsResiliencePageProps {
@@ -768,192 +764,30 @@ export function SecOpsResiliencePage({ onBack }: SecOpsResiliencePageProps): Rea
         {/* PHASE 3: PRACTICE */}
         {state.activePhase === 'practice' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-            {/* Seat 1: MLSecOps AI-BOM Gate */}
-            <section className="surface-card" style={{ padding: '18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <h2 style={{ fontSize: '15px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <ShieldCheck size={16} />
-                  MLSecOps · AI-BOM Admission Gate
-                </h2>
-                <span className={`badge ${state.enforceHashPinning ? 'badge-emerald' : 'badge-amber'}`}>
-                  {state.enforceHashPinning ? 'Hash Pinning ON' : 'Tag-Only (Vulnerable)'}
-                </span>
-              </div>
-
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '13px',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--bg-elevated)',
-                  cursor: 'pointer',
-                  marginBottom: '12px'
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={state.enforceHashPinning}
-                  onChange={(e) =>
-                    setState((prev) => ({ ...prev, enforceHashPinning: e.target.checked }))
-                  }
-                />
-                <span>Enforce CycloneDX AI-BOM Prompt SHA-256 &amp; Cosign Pinning</span>
-              </label>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="btn-secondary"
-                  onClick={() => runSupplyChainPipeline('MUTATED_PROMPT_3A')}
-                >
-                  Test Trap 3A (Mutated Prompt)
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="btn-primary"
-                  onClick={() => runSupplyChainPipeline('VERIFIED_PINNED')}
-                >
-                  Deploy Attested Build
-                </button>
-              </div>
-            </section>
-
-            {/* Seat 2: SOC Commander Canary & 3-Tier Kill Switchboard */}
-            <section className="surface-card" style={{ padding: '18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <h2 style={{ fontSize: '15px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <ShieldAlert size={16} />
-                  SOC Lead · Canary &amp; 3-Tier Kill Switch
-                </h2>
-                <span
-                  className={`badge ${
-                    state.activeKillSwitchTier !== 'NONE'
-                      ? 'badge-emerald'
-                      : state.canaryTripped || state.velocityAlertActive
-                        ? 'badge-crimson'
-                        : 'badge-blue'
-                  }`}
-                >
-                  {state.activeKillSwitchTier !== 'NONE'
-                    ? state.activeKillSwitchTier
-                    : state.canaryTripped
-                      ? 'CANARY TRIPPED'
-                      : 'ARMED'}
-                </span>
-              </div>
-
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                Inject Runtime Incident:
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="btn-secondary"
-                  onClick={() => runRuntimeProbe('INDIRECT_INJECTION_CANARY')}
-                >
-                  Trap 3B: CUST-CANARY-999
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="btn-secondary"
-                  onClick={() => runRuntimeProbe('RUNAWAY_COST_LOOP')}
-                >
-                  Trap 3C: Runaway Loop (&gt;$50/m)
-                </button>
-              </div>
-
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                3-Tier Kill Switchboard:
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="btn-secondary"
-                  onClick={() => triggerKillSwitch('TIER_1_MCP_FREEZE')}
-                  style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
-                >
-                  <span>Tier 1: Surgical MCP Tool Freeze</span>
-                  <span className="mono" style={{ fontSize: '11px' }}>38ms</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="btn-secondary"
-                  onClick={() => triggerKillSwitch('TIER_2_IAM_DENY')}
-                  style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
-                >
-                  <span>Tier 2: Identity Quarantine &amp; IAM Deny *</span>
-                  <span className="mono" style={{ fontSize: '11px' }}>112ms</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="btn-primary"
-                  onClick={() => triggerKillSwitch('TIER_3_GLOBAL_BREAKER')}
-                  style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}
-                >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    <Zap size={14} />
-                    Tier 3: Global Fleet Circuit Breaker (2-of-2)
-                  </span>
-                  <span className="mono" style={{ fontSize: '11px' }}>
-                    {state.cisoCosignVerified ? 'UNLOCKED' : 'LOCKED'}
-                  </span>
-                </button>
-              </div>
-            </section>
-
-            {/* Seat 3: CISO Dual-Custody Vault */}
-            <section className="surface-card" style={{ padding: '18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <h2 style={{ fontSize: '15px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <KeyRound size={16} />
-                  CISO · Tier-3 Break-Glass Vault
-                </h2>
-                <span className={`badge ${state.cisoCosignVerified ? 'badge-emerald' : 'badge-amber'}`}>
-                  {state.cisoCosignVerified ? 'Co-Signed' : 'Dual-Custody Gate'}
-                </span>
-              </div>
-
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                Tier 3 Global Fleet Circuit Breaker fails closed (<code className="mono">403 DUAL_CUSTODY_REQUIRED</code>) until Morgan Vance signs with a hardware FIDO2 key.
-              </p>
-
-              <button
-                type="button"
-                disabled={busy || state.cisoCosignVerified}
-                className="btn-primary"
-                onClick={handleCisoCosign}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Lock size={14} />
-                <span>
-                  {state.cisoCosignVerified
-                    ? `Co-Signed (${state.fido2AssertionId})`
-                    : 'Sign Tier-3 FIDO2 Dual-Custody Challenge'}
-                </span>
-              </button>
-
-              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setState((prev) => ({ ...prev, activePhase: 'reflection' }))}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <span>View Reflection &amp; Timeline</span>
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-            </section>
+            <MlSecOpsBomSeat
+              enforceHashPinning={state.enforceHashPinning}
+              busy={busy}
+              onToggleHashPinning={(checked) =>
+                setState((prev) => ({ ...prev, enforceHashPinning: checked }))
+              }
+              onRunPipeline={(preset) => void runSupplyChainPipeline(preset)}
+            />
+            <SocKillSwitchSeat
+              activeKillSwitchTier={state.activeKillSwitchTier}
+              canaryTripped={state.canaryTripped}
+              velocityAlertActive={state.velocityAlertActive}
+              cisoCosignVerified={state.cisoCosignVerified}
+              busy={busy}
+              onRunRuntimeProbe={(scenario) => void runRuntimeProbe(scenario)}
+              onTriggerKillSwitch={(action) => void triggerKillSwitch(action)}
+            />
+            <CisoDualCustodySeat
+              cisoCosignVerified={state.cisoCosignVerified}
+              fido2AssertionId={state.fido2AssertionId}
+              busy={busy}
+              onCisoCosign={handleCisoCosign}
+              onViewReflection={() => setState((prev) => ({ ...prev, activePhase: 'reflection' }))}
+            />
           </div>
         )}
 
