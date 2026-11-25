@@ -49,6 +49,7 @@ export function createCloudRunApp(options?: {
     LAB_SLUG: process.env.LAB_SLUG || 'secops-resilience',
     LAB_ROUTER_SECRET: process.env.LAB_ROUTER_SECRET,
     FIRESTORE_COLLECTION: process.env.FIRESTORE_COLLECTION || 'kv_state',
+    OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME,
     OTLP_ENDPOINT: process.env.OTLP_ENDPOINT,
     OTLP_AUTH_HEADER: process.env.OTLP_AUTH_HEADER
   };

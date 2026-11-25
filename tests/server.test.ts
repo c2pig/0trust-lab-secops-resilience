@@ -265,10 +265,13 @@ describe('Lab 3 Cloud Run Adapter — Security Invariants & API Flow', () => {
       );
 
       await new Promise((r) => setTimeout(r, 10));
-      assert.equal(capturedOtlpBodies.length, 1);
-      assert.ok(!capturedOtlpBodies[0].includes(TEST_ROUTER_SECRET));
-      assert.ok(!capturedOtlpBodies[0].includes('SuperSecretSignatureXYZ123'));
-      assert.ok(!capturedOtlpBodies[0].includes(otlpAuthSecret));
+      assert.equal(capturedOtlpBodies.length, 2);
+      for (const body of capturedOtlpBodies) {
+        assert.ok(body.includes('zerotrust-lab-secops-resilience'));
+        assert.ok(!body.includes(TEST_ROUTER_SECRET));
+        assert.ok(!body.includes('SuperSecretSignatureXYZ123'));
+        assert.ok(!body.includes(otlpAuthSecret));
+      }
     } finally {
       globalThis.fetch = originalFetch;
     }
