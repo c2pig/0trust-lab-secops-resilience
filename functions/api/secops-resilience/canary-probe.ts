@@ -15,13 +15,27 @@ export interface CanaryProbeRequest {
 
 const MAX_BODY_BYTES = 64 * 1024;
 const KV_TTL_SECONDS = 3600;
+const MAX_EPHEMERAL_ENTRIES = 256;
 const VALID_SCENARIOS = new Set<CanaryProbeScenario>([
   'CLEAN_TICKET',
   'INDIRECT_INJECTION_CANARY',
   'RUNAWAY_COST_LOOP'
 ]);
 
-const ephemeralCanaryStore = new Map<string, Record<string, unknown>>();
+const ephemeralCanaryStore = new Map<string, { value: Record<string, unknown>; expiresAt: number }>();
+
+function setEphemeralCanary(key: string, value: Record<string, unknown>): void {
+  const now = Date.now();
+  for (const [k, v] of ephemeralCanaryStore) {
+    if (v.expiresAt <= now) ephemeralCanaryStore.delete(k);
+  }
+  if (!ephemeralCanaryStore.has(key) && ephemeralCanaryStore.size >= MAX_EPHEMERAL_ENTRIES) {
+    const oldestKey = ephemeralCanaryStore.keys().next().value;
+    if (oldestKey !== undefined) ephemeralCanaryStore.delete(oldestKey);
+  }
+  ephemeralCanaryStore.delete(key);
+  ephemeralCanaryStore.set(key, { value, expiresAt: now + KV_TTL_SECONDS * 1000 });
+}
 
 function sanitizeSessionId(raw: string | null | undefined): string {
   if (!raw || typeof raw !== 'string') return 'demo-visitor';
@@ -118,7 +132,7 @@ export async function onRequestPost(context: {
       // Fall back silently if KV write fails
     }
   } else {
-    ephemeralCanaryStore.set(kvKey, record);
+    setEphemeralCanary(kvKey, record);
   }
 
   return jsonResponse(

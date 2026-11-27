@@ -30,6 +30,7 @@ interface SecOpsKvRecord {
 
 const MAX_BODY_BYTES = 64 * 1024;
 const KV_TTL_SECONDS = 3600;
+const MAX_EPHEMERAL_ENTRIES = 256;
 
 export const EXPECTED_MODEL_DIGEST =
   'sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
@@ -38,7 +39,30 @@ export const EXPECTED_PROMPT_SHA256 =
 export const EXPECTED_MCP_SCHEMA_HASH =
   'sha256:7c211433f02071597741e6ff5a8ea34789abbf433f02071597741e6ff5a8ea347';
 
-const ephemeralBomStore = new Map<string, SecOpsKvRecord>();
+const ephemeralBomStore = new Map<string, { value: SecOpsKvRecord; expiresAt: number }>();
+
+function getEphemeralBom(key: string): SecOpsKvRecord | null {
+  const entry = ephemeralBomStore.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    ephemeralBomStore.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function setEphemeralBom(key: string, value: SecOpsKvRecord): void {
+  const now = Date.now();
+  for (const [k, v] of ephemeralBomStore) {
+    if (v.expiresAt <= now) ephemeralBomStore.delete(k);
+  }
+  if (!ephemeralBomStore.has(key) && ephemeralBomStore.size >= MAX_EPHEMERAL_ENTRIES) {
+    const oldestKey = ephemeralBomStore.keys().next().value;
+    if (oldestKey !== undefined) ephemeralBomStore.delete(oldestKey);
+  }
+  ephemeralBomStore.delete(key);
+  ephemeralBomStore.set(key, { value, expiresAt: now + KV_TTL_SECONDS * 1000 });
+}
 
 function sanitizeSessionId(raw: string | null | undefined): string {
   if (!raw || typeof raw !== 'string') return 'demo-visitor';
@@ -108,7 +132,7 @@ export async function onRequestPost(context: {
       existing = null;
     }
   } else {
-    existing = ephemeralBomStore.get(kvKey) || null;
+    existing = getEphemeralBom(kvKey);
   }
 
   let statusCode = 200;
@@ -146,7 +170,7 @@ export async function onRequestPost(context: {
       expirationTtl: KV_TTL_SECONDS
     });
   } else {
-    ephemeralBomStore.set(kvKey, nextRecord);
+    setEphemeralBom(kvKey, nextRecord);
   }
 
   return jsonResponse(
