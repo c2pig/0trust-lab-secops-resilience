@@ -51,3 +51,5 @@ flowchart LR
 
 - **X-Ray Telemetry Drawer Theme**: Uses Chrome DevTools Light Mode palette (`#ffffff` / `#f1f3f4` surfaces, `#dadce0` borders, `#202124` / `#5f6368` text, `#1a73e8` active indicators) for high-contrast readability.
 - **3-Layer Unit Testing (`tests/*.test.ts`)**: `tsx --test` (`node:test`) covers Layer 1 Cloud Run adapter invariants (`tests/server.test.ts`), Layer 2 API route contracts with `MemoryKvAdapter` (`tests/api.test.ts`), and Layer 3 DOM-free engine + pure UI selectors (`src/engine/secopsResilienceSelectors.ts`, `tests/engine.test.ts`, `tests/selectors.test.ts`).
+
+- **Lease-Boundary Lifecycle (`LabLeaseGuard`)**: Synced `src/components/LabLeaseGuard.tsx` with `onLeaseEnded?: () => void` callback invoked on **End Lab** (`handleRelease()`) and lease expiry transitions.
