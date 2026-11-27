@@ -24,6 +24,7 @@ import {
   EXPECTED_PROMPT_SHA256,
   MUTATED_PROMPT_SHA256
 } from '../engine/secopsResilienceEngine';
+import { getGateBadgeMeta } from '../engine/secopsResilienceSelectors';
 import { RoleSeatItem, RoleSwitcherBar } from '../components/RoleSwitcherBar';
 import { XRayDecodedProofSection, XRayTelemetryDrawer } from '../components/XRayTelemetryDrawer';
 import { MlSecOpsBomSeat } from '../components/secops-resilience/MlSecOpsBomSeat';
@@ -36,16 +37,9 @@ export interface SecOpsResiliencePageProps {
 }
 
 function getGateBadge(status: GateStatus): React.ReactElement {
-  switch (status) {
-    case 'CHECKING':
-      return <span className="badge badge-blue">CHECKING</span>;
-    case 'PASS':
-      return <span className="badge badge-emerald">PASS</span>;
-    case 'BLOCK':
-      return <span className="badge badge-crimson">BLOCK</span>;
-    default:
-      return <span className="badge">WAITING</span>;
-  }
+  const meta = getGateBadgeMeta(status);
+  const cls = meta.className === 'badge' ? 'badge' : `badge ${meta.className}`;
+  return <span className={cls}>{meta.label}</span>;
 }
 
 export function SecOpsResiliencePage({ onBack }: SecOpsResiliencePageProps): React.ReactElement {
