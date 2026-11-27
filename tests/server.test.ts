@@ -347,4 +347,53 @@ describe('Lab 3 Cloud Run Adapter — Security Invariants & API Flow', () => {
     assert.equal(t3OkData.status, 'TIER_3_GLOBAL_BREAKER_ACTIVE');
     assert.equal(t3OkData.fido2_assertion_id, 'fido2-ciso-assertion-001');
   });
+
+  it('rejects >64 KB JSON body with 413 PAYLOAD_TOO_LARGE', async () => {
+    const kv = new MemoryKvAdapter({ labSlug: 'secops-resilience' });
+    const app = createCloudRunApp({
+      env: { ENVIRONMENT: 'development', LAB_SLUG: 'secops-resilience' },
+      kv
+    });
+
+    const oversizedPayload = JSON.stringify({
+      sessionId: 'oversized-session',
+      model_id: 'x'.repeat(65 * 1024)
+    });
+
+    const res = await app.request('http://127.0.0.1:8080/api/secops-resilience/verify-bom', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: oversizedPayload
+    });
+
+    assert.equal(res.status, 413);
+    const body = (await res.json()) as { error: string };
+    assert.equal(body.error, 'PAYLOAD_TOO_LARGE');
+  });
+
+  it('rejects malformed JSON with 400 INVALID_JSON and invalid kill-switch action with 400 INVALID_ACTION', async () => {
+    const kv = new MemoryKvAdapter({ labSlug: 'secops-resilience' });
+    const app = createCloudRunApp({
+      env: { ENVIRONMENT: 'development', LAB_SLUG: 'secops-resilience' },
+      kv
+    });
+
+    const malformedRes = await app.request('http://127.0.0.1:8080/api/secops-resilience/verify-bom', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{"model_id": '
+    });
+    assert.equal(malformedRes.status, 400);
+    const malformedBody = (await malformedRes.json()) as { error: string };
+    assert.equal(malformedBody.error, 'INVALID_JSON');
+
+    const invalidActionRes = await app.request('http://127.0.0.1:8080/api/secops-resilience/kill-switch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: 'test-session' })
+    });
+    assert.equal(invalidActionRes.status, 400);
+    const invalidActionBody = (await invalidActionRes.json()) as { error: string };
+    assert.equal(invalidActionBody.error, 'INVALID_ACTION');
+  });
 });

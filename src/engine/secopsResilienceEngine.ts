@@ -195,10 +195,11 @@ async function postEdgeJson<TResponse>(
   traceparent: string,
   payload: Record<string, unknown>
 ): Promise<{ ok: boolean; status: number; data: TResponse | null; origin: 'cloudflare-edge' | 'browser-webcrypto-fallback' }> {
+  const loc = (globalThis as unknown as { location?: { hostname?: string; port?: string } }).location;
   const isStaticLocalVite =
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
-    (window.location.port === '5178' || window.location.port === '4178');
+    Boolean(loc) &&
+    (loc?.hostname === 'localhost' || loc?.hostname === '127.0.0.1') &&
+    (loc?.port === '5178' || loc?.port === '4178');
 
   if (isStaticLocalVite) {
     return { ok: false, status: 0, data: null, origin: 'browser-webcrypto-fallback' };
