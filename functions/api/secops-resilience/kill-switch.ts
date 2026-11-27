@@ -17,6 +17,7 @@ export interface KillSwitchRequest {
 
 const MAX_BODY_BYTES = 64 * 1024;
 const KV_TTL_SECONDS = 3600;
+const MAX_EPHEMERAL_ENTRIES = 256;
 const VALID_ACTIONS = new Set<KillSwitchAction>([
   'TIER_1_MCP_FREEZE',
   'TIER_2_IAM_DENY',
@@ -24,7 +25,20 @@ const VALID_ACTIONS = new Set<KillSwitchAction>([
   'RESET'
 ]);
 
-const ephemeralKillStore = new Map<string, Record<string, unknown>>();
+const ephemeralKillStore = new Map<string, { value: Record<string, unknown>; expiresAt: number }>();
+
+function setEphemeralKill(key: string, value: Record<string, unknown>): void {
+  const now = Date.now();
+  for (const [k, v] of ephemeralKillStore) {
+    if (v.expiresAt <= now) ephemeralKillStore.delete(k);
+  }
+  if (!ephemeralKillStore.has(key) && ephemeralKillStore.size >= MAX_EPHEMERAL_ENTRIES) {
+    const oldestKey = ephemeralKillStore.keys().next().value;
+    if (oldestKey !== undefined) ephemeralKillStore.delete(oldestKey);
+  }
+  ephemeralKillStore.delete(key);
+  ephemeralKillStore.set(key, { value, expiresAt: now + KV_TTL_SECONDS * 1000 });
+}
 
 function sanitizeSessionId(raw: string | null | undefined): string {
   if (!raw || typeof raw !== 'string') return 'demo-visitor';
@@ -155,7 +169,7 @@ export async function onRequestPost(context: {
       // Ignore KV write error in edge fallback
     }
   } else {
-    ephemeralKillStore.set(kvKey, record);
+    setEphemeralKill(kvKey, record);
   }
 
   return jsonResponse(
